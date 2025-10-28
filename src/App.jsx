@@ -11,6 +11,7 @@ import { usePayments } from './context/PaymentContext'
 function App() {
   const { apiLogs } = usePayments();
   const [editData, setEditData] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const handleEdit = (paymentData) => {
     setEditData(paymentData);
@@ -18,6 +19,10 @@ function App() {
 
   const handleCancelEdit = () => {
     setEditData(null);
+  };
+
+  const handleCalculatingChange = (calculating) => {
+    setIsCalculating(calculating);
   };
 
   return (
@@ -33,8 +38,15 @@ function App() {
         <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6} w="100%">
           <VStack gap={6} align="stretch">
             <CurrencySelector />
-            <PaymentForm editData={editData} onCancelEdit={handleCancelEdit} />
-            <PaymentList onEdit={handleEdit} />
+            <PaymentForm 
+              editData={editData} 
+              onCancelEdit={handleCancelEdit}
+              isCalculating={isCalculating}
+            />
+            <PaymentList 
+              onEdit={handleEdit}
+              onCalculatingChange={handleCalculatingChange}
+            />
           </VStack>
           
           <Box h="calc(100vh - 280px)" minH="600px" maxH="800px">

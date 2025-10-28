@@ -6,7 +6,7 @@ import { DateRangePicker } from './DateRangePicker';
 
 const FREQUENCIES = ['Daily', 'Weekly', 'Bi-Weekly', 'Monthly', 'Quarterly', 'Annually'];
 
-export const PaymentForm = ({ editData, onCancelEdit }) => {
+export const PaymentForm = ({ editData, onCancelEdit, isCalculating }) => {
   const { addPayment, baseCurrency } = usePayments();
   const [formData, setFormData] = useState({
     startDate: '',
@@ -150,8 +150,16 @@ export const PaymentForm = ({ editData, onCancelEdit }) => {
             w={editData ? 'auto' : 'full'}
             size="lg"
             py={6}
+            disabled={isCalculating}
+            opacity={isCalculating ? 0.6 : 1}
+            cursor={isCalculating ? 'not-allowed' : 'pointer'}
           >
-            {editData ? 'Update Payment Entry' : 'Add Payment Entry'}
+            {isCalculating 
+              ? 'Calculating...' 
+              : editData 
+                ? 'Update Payment Entry' 
+                : 'Add Payment Entry'
+            }
           </Button>
           
           {editData && (

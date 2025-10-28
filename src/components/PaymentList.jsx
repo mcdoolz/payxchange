@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Box, HStack, IconButton, Spinner, Table, Text, VStack } from '@chakra-ui/react';
-import { FaTrash, FaEdit } from 'react-icons/fa';
+import { FaTrash, FaEdit, FaRedo } from 'react-icons/fa';
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { usePayments } from '../context/PaymentContext';
 import { fetchExchangeRate } from '../services/exchangeRate';
 
-export const PaymentList = ({ onEdit }) => {
+export const PaymentList = ({ onEdit, onCalculatingChange }) => {
   const { payments, removePayment, targetCurrency, addLog } = usePayments();
   const [conversions, setConversions] = useState({});
   const [loading, setLoading] = useState({});
+  const [failedPayments, setFailedPayments] = useState({});
+
+  // Notify parent when calculating state changes
+  useEffect(() => {
+    const isCalculating = Object.values(loading).some(val => val === true);
+    if (onCalculatingChange) {
+      onCalculatingChange(isCalculating);
+    }
+  }, [loading, onCalculatingChange]);
 
   useEffect(() => {
     const calculateConversions = async () => {
@@ -16,6 +25,23 @@ export const PaymentList = ({ onEdit }) => {
         // Validate payment has all required fields
         if (!payment.startDate || !payment.endDate || !payment.amount || !payment.baseCurrency) {
           console.log('Skipping invalid payment:', payment);
+          continue;
+        }
+
+        // Skip if base and target currencies are the same
+        if (payment.baseCurrency === targetCurrency) {
+          console.log('Skipping calculation - same currency:', payment.baseCurrency);
+          // Set conversion to just the total amount since it's the same currency
+          const dates = getPaymentDates(payment);
+          const totalAmount = payment.amount * dates.length;
+          setConversions(prev => ({ ...prev, [payment.id]: totalAmount }));
+          addLog({
+            type: 'info',
+            success: true,
+            message: `No conversion needed - same currency (${payment.baseCurrency})`,
+            result: `${totalAmount.toFixed(2)} ${payment.baseCurrency}`,
+            paymentId: payment.id
+          });
           continue;
         }
 
@@ -54,6 +80,7 @@ export const PaymentList = ({ onEdit }) => {
 
         let totalConverted = 0;
         let successCount = 0;
+        let failedCount = 0;
 
         // Convert each payment individually at its respective date
         for (let i = 0; i < paymentDates.length; i++) {
@@ -76,6 +103,7 @@ export const PaymentList = ({ onEdit }) => {
               paymentId: payment.id
             });
           } else {
+            failedCount++;
             addLog({
               type: 'api',
               success: false,
@@ -98,6 +126,13 @@ export const PaymentList = ({ onEdit }) => {
             total: totalCalculations,
             paymentId: payment.id
           });
+        }
+
+        // Track if this payment has failures
+        if (failedCount > 0) {
+          setFailedPayments(prev => ({ ...prev, [payment.id]: true }));
+        } else {
+          setFailedPayments(prev => ({ ...prev, [payment.id]: false }));
         }
 
         setConversions(prev => ({ ...prev, [payment.id]: totalConverted || null }));
@@ -171,6 +206,85 @@ export const PaymentList = ({ onEdit }) => {
   const calculateTotalPayments = (payment) => {
     const dates = getPaymentDates(payment);
     return payment.amount * dates.length;
+  };
+
+  const retryFailedCalculation = async (payment) => {
+    if (!payment.baseCurrency || payment.baseCurrency === targetCurrency) {
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, [payment.id]: true }));
+    setFailedPayments(prev => ({ ...prev, [payment.id]: false }));
+
+    const paymentDates = getPaymentDates(payment);
+    const totalCalculations = paymentDates.length;
+
+    addLog({
+      type: 'calculation',
+      success: true,
+      message: `Retrying ${totalCalculations} failed conversions`,
+      details: `${payment.baseCurrency} → ${targetCurrency}`,
+      paymentId: payment.id
+    });
+
+    let totalConverted = 0;
+    let successCount = 0;
+    let failedCount = 0;
+
+    // Retry all conversions for this payment
+    for (let i = 0; i < paymentDates.length; i++) {
+      const date = paymentDates[i];
+      const rate = await fetchExchangeRate(date, payment.baseCurrency, targetCurrency);
+      
+      if (rate) {
+        const converted = payment.amount * rate;
+        totalConverted += converted;
+        successCount++;
+        
+        addLog({
+          type: 'api',
+          success: true,
+          message: `Payment ${i + 1}/${totalCalculations}: ${format(date, 'MMM yyyy')} - ${payment.amount} ${payment.baseCurrency} @ ${rate.toFixed(4)}`,
+          result: `${converted.toFixed(2)} ${targetCurrency}`,
+          progress: i + 1,
+          total: totalCalculations,
+          paymentId: payment.id
+        });
+      } else {
+        failedCount++;
+        addLog({
+          type: 'api',
+          success: false,
+          message: `Failed to fetch rate for ${format(date, 'MMM dd, yyyy')}`,
+          details: `${payment.baseCurrency} → ${targetCurrency}`,
+          progress: i + 1,
+          total: totalCalculations,
+          paymentId: payment.id
+        });
+      }
+    }
+
+    if (successCount > 0) {
+      addLog({
+        type: 'calculation',
+        success: true,
+        message: `Retry complete`,
+        result: `${successCount}/${totalCalculations} payments = ${totalConverted.toFixed(2)} ${targetCurrency}`,
+        progress: totalCalculations,
+        total: totalCalculations,
+        paymentId: payment.id
+      });
+    }
+
+    // Update failure status
+    if (failedCount > 0) {
+      setFailedPayments(prev => ({ ...prev, [payment.id]: true }));
+    } else {
+      setFailedPayments(prev => ({ ...prev, [payment.id]: false }));
+    }
+
+    setConversions(prev => ({ ...prev, [payment.id]: totalConverted || null }));
+    setLoading(prev => ({ ...prev, [payment.id]: false }));
   };
 
   if (payments.length === 0) {
@@ -261,15 +375,34 @@ export const PaymentList = ({ onEdit }) => {
                   {isLoading ? (
                     <Spinner size="sm" />
                   ) : converted ? (
-                    <Text fontWeight="bold" color="black">
-                      {targetCurrency} {converted.toFixed(2)}
-                    </Text>
+                    <VStack align="start" gap={0}>
+                      <Text fontWeight="bold" color="black">
+                        {targetCurrency} {converted.toFixed(2)}
+                      </Text>
+                      {failedPayments[payment.id] && (
+                        <Text fontSize="xs" color="orange.500">
+                          Some conversions failed
+                        </Text>
+                      )}
+                    </VStack>
                   ) : (
                     <Text fontSize="sm" color="red.500">Error</Text>
                   )}
                 </Table.Cell>
                 <Table.Cell py={4} px={4}>
                   <HStack gap={2}>
+                    {failedPayments[payment.id] && !isLoading && (
+                      <IconButton
+                        size="sm"
+                        colorScheme="orange"
+                        variant="ghost"
+                        onClick={() => retryFailedCalculation(payment)}
+                        aria-label="Retry failed conversions"
+                        title="Retry failed conversions"
+                      >
+                        <FaRedo />
+                      </IconButton>
+                    )}
                     <IconButton
                       size="sm"
                       colorScheme="blue"

@@ -7,6 +7,24 @@ import { CURRENCIES } from '../services/exchangeRate';
 export const CurrencySelector = () => {
   const { baseCurrency, targetCurrency, setBaseCurrency, setTargetCurrency } = usePayments();
 
+  const handleBaseCurrencyChange = (e) => {
+    const newBase = e.target.value;
+    if (newBase === targetCurrency) {
+      // If selecting the same currency as target, swap them
+      setTargetCurrency(baseCurrency);
+    }
+    setBaseCurrency(newBase);
+  };
+
+  const handleTargetCurrencyChange = (e) => {
+    const newTarget = e.target.value;
+    if (newTarget === baseCurrency) {
+      // If selecting the same currency as base, swap them
+      setBaseCurrency(targetCurrency);
+    }
+    setTargetCurrency(newTarget);
+  };
+
   return (
     <HStack gap={4} mb={6}>
       <Box>
@@ -14,14 +32,16 @@ export const CurrencySelector = () => {
         <NativeSelectRoot size="lg">
           <NativeSelectField 
             value={baseCurrency} 
-            onChange={(e) => setBaseCurrency(e.target.value)}
+            onChange={handleBaseCurrencyChange}
             color="black"
             bg="white"
             px={4}
             py={2}
           >
             {CURRENCIES.map(curr => (
-              <option key={curr} value={curr}>{curr}</option>
+              <option key={curr} value={curr} disabled={curr === targetCurrency}>
+                {curr}{curr === targetCurrency ? ' (selected as target)' : ''}
+              </option>
             ))}
           </NativeSelectField>
         </NativeSelectRoot>
@@ -36,14 +56,16 @@ export const CurrencySelector = () => {
         <NativeSelectRoot size="lg">
           <NativeSelectField 
             value={targetCurrency} 
-            onChange={(e) => setTargetCurrency(e.target.value)}
+            onChange={handleTargetCurrencyChange}
             color="black"
             bg="white"
             px={4}
             py={2}
           >
             {CURRENCIES.map(curr => (
-              <option key={curr} value={curr}>{curr}</option>
+              <option key={curr} value={curr} disabled={curr === baseCurrency}>
+                {curr}{curr === baseCurrency ? ' (selected as base)' : ''}
+              </option>
             ))}
           </NativeSelectField>
         </NativeSelectRoot>
