@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, HStack, IconButton, Spinner, Table, Text } from '@chakra-ui/react';
+import { Box, HStack, IconButton, Spinner, Table, Text, VStack } from '@chakra-ui/react';
 import { FaTrash, FaEdit } from 'react-icons/fa';
 import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { usePayments } from '../context/PaymentContext';
@@ -194,6 +194,26 @@ export const PaymentList = ({ onEdit }) => {
     }
   };
 
+  // Calculate totals grouped by currency
+  const totalsByCurrency = payments.reduce((acc, payment) => {
+    const currency = payment.baseCurrency;
+    const total = calculateTotalPayments(payment);
+    
+    if (!acc[currency]) {
+      acc[currency] = 0;
+    }
+    acc[currency] += total;
+    
+    return acc;
+  }, {});
+
+  const grandTotalConverted = payments.reduce((sum, payment) => {
+    const converted = conversions[payment.id];
+    return sum + (converted || 0);
+  }, 0);
+
+  const hasMultiplePayments = payments.length > 1;
+
   return (
     <Box overflowX="auto" bg="white" borderRadius="lg" shadow="md" p={4}>
       <Table.Root variant="simple">
@@ -273,6 +293,31 @@ export const PaymentList = ({ onEdit }) => {
               </Table.Row>
             );
           })}
+          
+          {hasMultiplePayments && (
+            <Table.Row bg="gray.50" fontWeight="bold">
+              <Table.Cell py={4} px={4}>
+                <Text fontWeight="bold" color="black">TOTALS</Text>
+              </Table.Cell>
+              <Table.Cell py={4} px={4}></Table.Cell>
+              <Table.Cell py={4} px={4}></Table.Cell>
+              <Table.Cell py={4} px={4}>
+                <VStack align="start" gap={1}>
+                  {Object.entries(totalsByCurrency).map(([currency, total]) => (
+                    <Text key={currency} fontWeight="bold" color="black">
+                      {currency} {total.toFixed(2)}
+                    </Text>
+                  ))}
+                </VStack>
+              </Table.Cell>
+              <Table.Cell py={4} px={4}>
+                <Text fontWeight="bold" color="black">
+                  {targetCurrency} {grandTotalConverted.toFixed(2)}
+                </Text>
+              </Table.Cell>
+              <Table.Cell py={4} px={4}></Table.Cell>
+            </Table.Row>
+          )}
         </Table.Body>
       </Table.Root>
     </Box>
