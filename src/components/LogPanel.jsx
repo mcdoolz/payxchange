@@ -2,11 +2,11 @@ import React from 'react';
 import { Box, Heading, Text, VStack, HStack, Badge, Button } from '@chakra-ui/react';
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from '@chakra-ui/react/collapsible';
 import { FaCheckCircle, FaTimesCircle, FaCalculator, FaExchangeAlt, FaDownload, FaFileExport, FaChevronDown, FaChevronUp, FaTrash } from 'react-icons/fa';
-import { format } from 'date-fns';
+import { format, addDays, addWeeks, addMonths } from 'date-fns';
 import { usePayments } from '../context/PaymentContext';
 
 export const LogPanel = ({ apiLogs = [] }) => {
-  const { payments, paymentLogs, clearLogs } = usePayments();
+  const { payments, paymentLogs, clearLogs, targetCurrency } = usePayments();
   const [expandedPayments, setExpandedPayments] = React.useState({});
 
   const togglePayment = (paymentId) => {
@@ -78,10 +78,90 @@ export const LogPanel = ({ apiLogs = [] }) => {
       };
     });
 
-    const csvContent = [
+    let csvContent = [
       Object.keys(report[0] || {}).join(','),
       ...report.map(row => Object.values(row).map(v => `"${v}"`).join(','))
     ].join('\n');
+
+    // Add totals section if there are multiple payments
+    if (payments.length > 1) {
+      // Calculate totals grouped by currency
+      const calculateTotalPayments = (payment) => {
+        const [year, month, day] = payment.startDate.split('-').map(Number);
+        const startDateObj = new Date(year, month - 1, day);
+        const [endYear, endMonth, endDay] = payment.endDate.split('-').map(Number);
+        const endDateObj = new Date(endYear, endMonth - 1, endDay);
+
+        let count = 0;
+        let currentDate = startDateObj;
+
+        while (currentDate <= endDateObj) {
+          count++;
+          switch (payment.frequency) {
+            case 'Daily':
+              currentDate = addDays(currentDate, 1);
+              break;
+            case 'Weekly':
+              currentDate = addWeeks(currentDate, 1);
+              break;
+            case 'Bi-Weekly':
+              currentDate = addWeeks(currentDate, 2);
+              break;
+            case 'Semi-Monthly':
+              currentDate = addWeeks(currentDate, 2);
+              break;
+            case 'Monthly':
+              currentDate = addMonths(currentDate, 1);
+              break;
+            case 'Quarterly':
+              currentDate = addMonths(currentDate, 3);
+              break;
+            default:
+              currentDate = addMonths(currentDate, 1);
+          }
+        }
+        return payment.amount * count;
+      };
+
+      const totalsByCurrency = payments.reduce((acc, payment) => {
+        const currency = payment.baseCurrency;
+        const total = calculateTotalPayments(payment);
+        
+        if (!acc[currency]) {
+          acc[currency] = 0;
+        }
+        acc[currency] += total;
+        
+        return acc;
+      }, {});
+
+      // Calculate grand total converted from payment logs
+      const grandTotalConverted = payments.reduce((sum, payment) => {
+        const logs = paymentLogs[payment.id] || [];
+        const totalLog = logs.find(log => log.message.includes('Total conversion complete'));
+        
+        if (totalLog && totalLog.result) {
+          // Extract number from result string like "12/12 payments = 187134.00 EUR"
+          const match = totalLog.result.match(/=\s*([\d.]+)/);
+          if (match) {
+            return sum + parseFloat(match[1]);
+          }
+        }
+        return sum;
+      }, 0);
+
+      // Add blank row and totals section
+      csvContent += '\n\n';
+      csvContent += '"TOTALS",,,,,,\n';
+      
+      // Add row for each currency
+      Object.entries(totalsByCurrency).forEach(([currency, total]) => {
+        csvContent += `"","","","${currency} ${total.toFixed(2)}","","",\n`;
+      });
+      
+      // Add grand total converted
+      csvContent += `"","","","","${grandTotalConverted.toFixed(2)} ${targetCurrency}","",`;
+    }
     
     downloadCSV(csvContent, 'payxchange-cumulative-report.csv');
   };
