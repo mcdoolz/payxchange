@@ -41,7 +41,7 @@ export const Footer = () => {
       </HStack>
       
       <Text textAlign="center" mt={3} fontSize="sm" color="gray.600">
-        © {new Date().getFullYear()} PayXChange. Historical Currency Conversion Calculator.
+        © {new Date().getFullYear()} PayXChange — Digital Forge Studios Inc. Historical Currency Conversion Calculator.
       </Text>
     </Box>
   );
