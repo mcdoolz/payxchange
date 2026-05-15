@@ -5,6 +5,7 @@
 [project]
 name = "payxchange"
 strategy = "script"
+source = "external/payxchange"
 
 [build]
 build_cmd = "docker run --rm -v $(pwd):/app -w /app node:22-slim sh -c 'npm ci && npm run build'"
