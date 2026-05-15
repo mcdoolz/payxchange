@@ -4,7 +4,7 @@ import { NativeSelectRoot, NativeSelectField } from '@chakra-ui/react/native-sel
 import { usePayments } from '../context/PaymentContext';
 import { DateRangePicker } from './DateRangePicker';
 
-const FREQUENCIES = ['Daily', 'Weekly', 'Bi-Weekly', 'Monthly', 'Quarterly', 'Annually'];
+const FREQUENCIES = ['Daily', 'Weekly', 'Bi-Weekly', 'Semi-Monthly', 'Monthly', 'Quarterly', 'Annually'];
 
 export const PaymentForm = ({ editData, onCancelEdit, isCalculating }) => {
   const { addPayment, baseCurrency } = usePayments();

@@ -107,9 +107,15 @@ export const LogPanel = ({ apiLogs = [] }) => {
             case 'Bi-Weekly':
               currentDate = addWeeks(currentDate, 2);
               break;
-            case 'Semi-Monthly':
-              currentDate = addWeeks(currentDate, 2);
+            case 'Semi-Monthly': {
+              const day = currentDate.getDate();
+              if (day < 15) {
+                currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+              } else {
+                currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+              }
               break;
+            }
             case 'Monthly':
               currentDate = addMonths(currentDate, 1);
               break;
