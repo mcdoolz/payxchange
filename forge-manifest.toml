@@ -1,0 +1,22 @@
+# PayXChange — Historical Currency Conversion Calculator
+# React/Vite SPA. Built inside a Node Docker container.
+# Deployed to Dionysus static sites directory.
+
+[project]
+name = "payxchange"
+strategy = "script"
+
+[build]
+build_cmd = "docker run --rm -v $(pwd):/app -w /app node:22-slim sh -c 'npm ci && npm run build'"
+output_dir = "dist"
+disk_estimate_mb = 500
+
+[deploy]
+artifact_dest = "/opt/forge/services/dionysus/sites/pmx"
+health_url = "https://pmx.dforge.ca"
+health_timeout_secs = 30
+deploy_cmd = "chmod -R a+rX /opt/forge/services/dionysus/sites/pmx && docker exec dionysus nginx -s reload"
+
+[notify]
+on_success = ["discord:#ci-builds"]
+on_failure = ["discord:#ci-builds"]
