@@ -8,7 +8,7 @@ strategy = "script"
 source = "external/payxchange"
 
 [build]
-build_cmd = "docker run --rm --user 1000:1000 -v /opt/forge-src/external/payxchange:/app -w /app node:22-slim sh -c 'npm install --no-audit --no-fund 2>&1 && npm run build 2>&1'"
+build_cmd = "rm -rf /opt/forge-src/.tmp/pmx-build && mkdir -p /opt/forge-src/.tmp/pmx-build && docker run --rm -v /opt/forge-src/external/payxchange:/src:ro -v /opt/forge-src/.tmp/pmx-build:/out node:22-slim sh -c 'cp -a /src/. /tmp/build && cd /tmp/build && npm install --no-audit --no-fund && npm run build && cp -a /tmp/build/dist/. /out/' && rm -rf /workspace/external/payxchange/dist && cp -a /workspace/.tmp/pmx-build /workspace/external/payxchange/dist && rm -rf /workspace/.tmp/pmx-build"
 output_dir = "dist"
 disk_estimate_mb = 500
 
