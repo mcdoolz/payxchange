@@ -16,12 +16,12 @@ export const Footer = () => {
         <HStack gap={2}>
           <FaEnvelope color="gray" />
           <Link 
-            href="mailto:apouriliaee@gmail.com" 
+            href="mailto:dforge@googlegroups.com" 
             color="blue.600" 
             fontWeight="medium"
             _hover={{ color: "blue.800" }}
           >
-            apouriliaee@gmail.com
+            dforge@googlegroups.com
           </Link>
         </HStack>
         
