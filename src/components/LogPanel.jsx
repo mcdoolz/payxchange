@@ -108,11 +108,14 @@ export const LogPanel = ({ apiLogs = [] }) => {
               currentDate = addWeeks(currentDate, 2);
               break;
             case 'Semi-Monthly': {
+              const d1 = payment.semiMonthlyDay1 || 1;
+              const d2 = payment.semiMonthlyDay2 || 15;
+              const [dayA, dayB] = d1 < d2 ? [d1, d2] : [d2, d1];
               const day = currentDate.getDate();
-              if (day < 15) {
-                currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 15);
+              if (day < dayB) {
+                currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayB);
               } else {
-                currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+                currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, dayA);
               }
               break;
             }

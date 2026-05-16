@@ -13,6 +13,8 @@ export const PaymentForm = ({ editData, onCancelEdit, isCalculating }) => {
     endDate: '',
     amount: '',
     frequency: 'Monthly',
+    semiMonthlyDay1: 1,
+    semiMonthlyDay2: 15,
   });
 
   // Update form when editData changes
@@ -23,15 +25,23 @@ export const PaymentForm = ({ editData, onCancelEdit, isCalculating }) => {
         endDate: editData.endDate || '',
         amount: editData.amount || '',
         frequency: editData.frequency || 'Monthly',
+        semiMonthlyDay1: editData.semiMonthlyDay1 || 1,
+        semiMonthlyDay2: editData.semiMonthlyDay2 || 15,
       });
     }
   }, [editData]);
 
   const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Reset semi-monthly days when switching away from Semi-Monthly
+      if (name === 'frequency' && value !== 'Semi-Monthly') {
+        updated.semiMonthlyDay1 = 1;
+        updated.semiMonthlyDay2 = 15;
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -70,19 +80,27 @@ export const PaymentForm = ({ editData, onCancelEdit, isCalculating }) => {
 
     console.log('Validation passed, adding payment');
     
-    addPayment({
+    const paymentData = {
       ...formData,
       amount: parseFloat(formData.amount),
       startDate: formData.startDate,
       endDate: formData.endDate,
       baseCurrency,
-    });
+    };
+    // Include semi-monthly days only when relevant
+    if (formData.frequency === 'Semi-Monthly') {
+      paymentData.semiMonthlyDay1 = parseInt(formData.semiMonthlyDay1, 10) || 1;
+      paymentData.semiMonthlyDay2 = parseInt(formData.semiMonthlyDay2, 10) || 15;
+    }
+    addPayment(paymentData);
 
     setFormData({
       startDate: '',
       endDate: '',
       amount: '',
       frequency: 'Monthly',
+      semiMonthlyDay1: 1,
+      semiMonthlyDay2: 15,
     });
     
     // Clear edit mode if we were editing
@@ -101,6 +119,58 @@ export const PaymentForm = ({ editData, onCancelEdit, isCalculating }) => {
           onEndDateChange={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
           label="Payment Date Range *"
         />
+
+        {formData.frequency === 'Semi-Monthly' && (
+          <Box
+            w="full"
+            overflow="hidden"
+            transition="all 0.3s ease-in-out"
+            opacity={1}
+            maxH="80px"
+            css={{
+              animation: 'fadeSlideIn 0.3s ease-in-out',
+              '@keyframes fadeSlideIn': {
+                from: { opacity: 0, maxHeight: '0px', marginTop: '0' },
+                to: { opacity: 1, maxHeight: '80px', marginTop: 'var(--chakra-space-0)' },
+              },
+            }}
+          >
+            <HStack gap={4}>
+              <Box flex={1}>
+                <Text fontSize="xs" mb={1} fontWeight="medium" color="gray.600">Pay Day 1</Text>
+                <Input
+                  type="number"
+                  name="semiMonthlyDay1"
+                  value={formData.semiMonthlyDay1}
+                  onChange={handleChange}
+                  min={1}
+                  max={31}
+                  color="black"
+                  bg="white"
+                  size="sm"
+                  w="80px"
+                  textAlign="center"
+                />
+              </Box>
+              <Box flex={1}>
+                <Text fontSize="xs" mb={1} fontWeight="medium" color="gray.600">Pay Day 2</Text>
+                <Input
+                  type="number"
+                  name="semiMonthlyDay2"
+                  value={formData.semiMonthlyDay2}
+                  onChange={handleChange}
+                  min={1}
+                  max={31}
+                  color="black"
+                  bg="white"
+                  size="sm"
+                  w="80px"
+                  textAlign="center"
+                />
+              </Box>
+            </HStack>
+          </Box>
+        )}
 
         <HStack w="full" gap={4}>
           <Box flex={1}>

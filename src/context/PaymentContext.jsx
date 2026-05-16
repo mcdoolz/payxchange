@@ -77,7 +77,11 @@ export const PaymentProvider = ({ children }) => {
   };
 
   const addPayment = (payment) => {
-    setPayments(prev => [...prev, { ...payment, id: Date.now() }]);
+    const paymentData = { ...payment, id: Date.now() };
+    // Ensure semi-monthly fields are persisted when present
+    if (payment.semiMonthlyDay1 !== undefined) paymentData.semiMonthlyDay1 = parseInt(payment.semiMonthlyDay1, 10);
+    if (payment.semiMonthlyDay2 !== undefined) paymentData.semiMonthlyDay2 = parseInt(payment.semiMonthlyDay2, 10);
+    setPayments(prev => [...prev, paymentData]);
     addLog({
       type: 'calculation',
       success: true,
