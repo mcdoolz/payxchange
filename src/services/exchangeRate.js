@@ -2,7 +2,9 @@ import { format } from 'date-fns';
 
 // Using Frankfurter API - Free, supports historical rates since 1999
 // Supports: AUD, BGN, BRL, CAD, CHF, CNY, CZK, DKK, EUR, GBP, HKD, HUF, IDR, ILS, INR, ISK, JPY, KRW, MXN, MYR, NOK, NZD, PHP, PLN, RON, SEK, SGD, THB, TRY, USD, ZAR
-const API_BASE = 'https://api.frankfurter.app';
+// Note: The old api.frankfurter.app domain now 301-redirects without CORS headers,
+// causing browser CORS failures. Use the new api.frankfurter.dev/v1 endpoint directly.
+const API_BASE = 'https://api.frankfurter.dev/v1';
 
 // Cache to avoid redundant API calls
 const rateCache = new Map();
